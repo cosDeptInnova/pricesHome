@@ -19,7 +19,10 @@ def filter_listings(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
 
 def build_training_frame(
-    listings: pd.DataFrame, macro_df: pd.DataFrame, news_df: pd.DataFrame
+    listings: pd.DataFrame,
+    macro_df: pd.DataFrame,
+    news_df: pd.DataFrame,
+    historical_features: dict | None = None,
 ) -> pd.DataFrame:
     latest_macro = macro_df.iloc[0].to_dict()
     latest_news = news_df.iloc[0].to_dict()
@@ -30,5 +33,11 @@ def build_training_frame(
     for k, v in latest_news.items():
         if k != "snapshot_utc":
             df[k] = v
+
+    for k, v in (historical_features or {}).items():
+        df[k] = v
+
+    if "tipologia" not in df.columns:
+        df["tipologia"] = "media"
 
     return df
