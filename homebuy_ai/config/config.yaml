@@ -1,0 +1,60 @@
+project:
+  name: "homebuy_ai"
+  timezone: "Europe/Madrid"
+  region_focus: ["Comunidad de Madrid", "Corredor del Henares"]
+
+paths:
+  listings_csv: "data/input/listings_sample.csv"
+  output_dir: "data/output"
+
+filters:
+  must_have:
+    - "piscina"
+    - "zonas_comunes"
+  min_m2: 70
+  max_price: 500000
+  municipios_prioritarios:
+    - "Alcalá de Henares"
+    - "Torrejón de Ardoz"
+    - "Coslada"
+    - "San Fernando de Henares"
+    - "Madrid"
+
+macro:
+  euribor_12m: 3.10
+  inflation_yoy: 2.90
+  unemployment_rate: 10.8
+  ibex_monthly_change_pct: 1.2
+
+news:
+  rss_feeds:
+    - "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/economia/portada"
+    - "https://e00-expansion.uecdn.es/rss/empresas.xml"
+    - "https://www.abc.es/rss/feeds/abc_Economia.xml"
+  keywords:
+    - "vivienda"
+    - "hipoteca"
+    - "euribor"
+    - "suelo"
+    - "urbanismo"
+    - "tipo de interés"
+
+model:
+  test_size: 0.2
+  random_state: 42
+  target_col: "price_per_m2"
+
+scoring:
+  weights:
+    valuation_gap: 0.35
+    macro_affordability: 0.25
+    inventory_pressure: 0.20
+    news_sentiment: 0.20
+  thresholds:
+    buy: 70
+    wait: 45
+
+openai:
+  enabled: true
+  api_key: "PUT_YOUR_OPENAI_API_KEY_HERE"
+  model: "gpt-4o-mini"
