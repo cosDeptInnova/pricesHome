@@ -7,6 +7,31 @@ paths:
   listings_csv: "data/input/listings_sample.csv"
   output_dir: "data/output"
 
+listings:
+  source: "csv" # csv | api
+  api:
+    endpoint: "https://api.tu_fuente_oficial.es/listings"
+    method: "GET"
+    timeout_seconds: 25
+    token: ""
+    token_header: "Authorization"
+    records_key: "results"
+    headers: {}
+    params: {}
+    # mapping destino->origen en payload API
+    field_mapping:
+      listing_id: "id"
+      date: "published_at"
+      municipio: "municipality"
+      price: "price_eur"
+      m2: "built_area"
+      rooms: "bedrooms"
+      piscina: "pool"
+      zonas_comunes: "common_areas"
+      garage: "parking"
+      ascensor: "lift"
+      tipologia: "property_type"
+
 filters:
   must_have:
     - "piscina"
@@ -26,6 +51,21 @@ macro:
   unemployment_rate: 10.8
   ibex_monthly_change_pct: 1.2
 
+historical:
+  sources:
+    - source: "INE"
+      indicator: "ipc_yoy"
+      scope: "Comunidad de Madrid"
+      path: "data/input/historical_ine_ipc.csv"
+    - source: "MITMA"
+      indicator: "precio_vivienda_m2"
+      scope: "Comunidad de Madrid"
+      path: "data/input/historical_mitma_price_m2.csv"
+    - source: "BdE"
+      indicator: "tipo_hipoteca_medio"
+      scope: "España"
+      path: "data/input/historical_bde_mortgage_rate.csv"
+
 news:
   rss_feeds:
     - "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/economia/portada"
@@ -43,6 +83,10 @@ model:
   test_size: 0.2
   random_state: 42
   target_col: "price_per_m2"
+  segment_min_rows: 8
+
+forecast:
+  horizon_months: 6
 
 scoring:
   weights:
