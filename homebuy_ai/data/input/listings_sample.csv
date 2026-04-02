@@ -1,0 +1,13 @@
+listing_id,date,municipio,price,m2,rooms,piscina,zonas_comunes,garage,ascensor
+1,2026-03-20,Alcalá de Henares,265000,92,3,1,1,1,1
+2,2026-03-18,Torrejón de Ardoz,240000,85,3,1,1,0,1
+3,2026-03-15,Coslada,219000,78,2,0,1,0,1
+4,2026-03-10,San Fernando de Henares,228000,80,3,1,1,1,1
+5,2026-03-05,Madrid,420000,95,3,1,1,1,1
+6,2026-02-25,Alcalá de Henares,259000,90,3,1,1,0,1
+7,2026-02-20,Torrejón de Ardoz,235000,83,3,1,1,1,1
+8,2026-02-18,Coslada,215000,77,2,0,1,0,1
+9,2026-02-12,San Fernando de Henares,225000,79,3,1,1,0,1
+10,2026-02-08,Madrid,415000,94,3,1,1,1,1
+11,2026-01-25,Alcalá de Henares,255000,89,3,1,1,1,1
+12,2026-01-18,Torrejón de Ardoz,232000,82,3,1,1,0,1
