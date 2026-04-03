@@ -129,6 +129,8 @@ def run_pipeline(cfg: dict) -> dict:
 
     segment_models = getattr(model_result, "segment_models", {}) or {}
 
+    segment_models = getattr(model_result, "segment_models", {}) or {}
+
     summary = {
         "run_id": run_id,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
