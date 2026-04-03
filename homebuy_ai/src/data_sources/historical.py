@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import re
+import zipfile
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 import pandas as pd
 
@@ -12,6 +15,174 @@ SERIES_RENAME = {
     "region": "scope",
     "municipio": "scope",
 }
+NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+QUARTER_RE = re.compile(r"^(\d{4})T([1-4])$")
+
+
+def _excel_col_to_idx(cell_ref: str) -> int:
+    letters = "".join(ch for ch in cell_ref if ch.isalpha())
+    col = 0
+    for ch in letters:
+        col = col * 26 + (ord(ch.upper()) - ord("A") + 1)
+    return col - 1
+
+
+def _xlsx_sheet_to_rows(path: Path) -> list[list[str | float | None]]:
+    with zipfile.ZipFile(path) as zf:
+        workbook = ET.fromstring(zf.read("xl/workbook.xml"))
+        first_sheet = workbook.find("m:sheets/m:sheet", NS)
+        if first_sheet is None:
+            return []
+
+        rel_id = first_sheet.attrib.get("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id")
+        rels = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
+        target = None
+        for rel in rels:
+            if rel.attrib.get("Id") == rel_id:
+                target = rel.attrib.get("Target")
+                break
+        if not target:
+            return []
+
+        sheet_root = ET.fromstring(zf.read(f"xl/{target}"))
+
+    rows = []
+    for row in sheet_root.findall("m:sheetData/m:row", NS):
+        parsed_row = {}
+        for cell in row.findall("m:c", NS):
+            ref = cell.attrib.get("r", "A1")
+            col_idx = _excel_col_to_idx(ref)
+            cell_type = cell.attrib.get("t")
+
+            value: str | float | None = None
+            if cell_type == "inlineStr":
+                text_node = cell.find("m:is/m:t", NS)
+                value = text_node.text if text_node is not None else ""
+            else:
+                val_node = cell.find("m:v", NS)
+                raw = val_node.text if val_node is not None else None
+                if raw is not None:
+                    try:
+                        value = float(raw)
+                    except ValueError:
+                        value = raw
+
+            parsed_row[col_idx] = value
+
+        if not parsed_row:
+            continue
+        max_col = max(parsed_row.keys())
+        full = [None] * (max_col + 1)
+        for idx, val in parsed_row.items():
+            full[idx] = val
+        rows.append(full)
+
+    return rows
+
+
+def _parse_quarter_to_date(value: str) -> pd.Timestamp | None:
+    m = QUARTER_RE.match(value.strip())
+    if not m:
+        return None
+    year = int(m.group(1))
+    quarter = int(m.group(2))
+    month = quarter * 3
+    return pd.Timestamp(year=year, month=month, day=1)
+
+
+def _load_ine_xlsx(path: Path, source: str, indicator_prefix: str, default_scope: str) -> pd.DataFrame:
+    rows = _xlsx_sheet_to_rows(path)
+    if not rows:
+        return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
+
+    header_idx = None
+    quarter_cols: list[tuple[int, pd.Timestamp]] = []
+    for i, row in enumerate(rows):
+        local_q = []
+        for j, val in enumerate(row):
+            if isinstance(val, str):
+                ts = _parse_quarter_to_date(val)
+                if ts is not None:
+                    local_q.append((j, ts))
+        if len(local_q) >= 4:
+            header_idx = i
+            quarter_cols = local_q
+            break
+
+    if header_idx is None:
+        return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
+
+    records = []
+    current_scope = default_scope
+
+    for row in rows[header_idx + 1 :]:
+        if not row:
+            continue
+
+        label = row[0] if len(row) > 0 else None
+        if isinstance(label, str):
+            clean_label = label.strip()
+            if not clean_label:
+                continue
+
+            has_numeric = any(
+                (col_idx < len(row) and isinstance(row[col_idx], (int, float)))
+                for col_idx, _ in quarter_cols
+            )
+
+            if not label.startswith(" ") and not has_numeric:
+                current_scope = clean_label
+                continue
+
+            if has_numeric:
+                metric_slug = re.sub(r"\W+", "_", clean_label.lower()).strip("_")
+                indicator = f"{indicator_prefix}_{metric_slug}" if metric_slug else indicator_prefix
+                for col_idx, date in quarter_cols:
+                    if col_idx >= len(row):
+                        continue
+                    val = row[col_idx]
+                    if isinstance(val, (int, float)):
+                        records.append(
+                            {
+                                "source": source,
+                                "indicator": indicator,
+                                "scope": current_scope,
+                                "date": date,
+                                "series_value": float(val),
+                            }
+                        )
+
+    if not records:
+        return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
+
+    return pd.DataFrame(records)
+
+
+def _load_single_source(item: dict) -> pd.DataFrame:
+    path = Path(item["path"])
+    if not path.exists():
+        return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
+
+    source = item.get("source", path.stem)
+    indicator = item.get("indicator", path.stem)
+    scope = item.get("scope", "Comunidad de Madrid")
+
+    if path.suffix.lower() in {".xlsx", ".xlsm", ".xls"}:
+        return _load_ine_xlsx(path, source=source, indicator_prefix=indicator, default_scope=scope)
+
+    df = pd.read_csv(path)
+    df = df.rename(columns={k: v for k, v in SERIES_RENAME.items() if k in df.columns})
+
+    if "date" not in df.columns or "series_value" not in df.columns:
+        return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
+
+    out = df[["date", "series_value"]].copy()
+    out["source"] = source
+    out["indicator"] = indicator
+    out["scope"] = df["scope"] if "scope" in df.columns else scope
+    out["date"] = pd.to_datetime(out["date"], errors="coerce")
+    out["series_value"] = pd.to_numeric(out["series_value"], errors="coerce")
+    return out.dropna(subset=["date", "series_value"])
 
 
 def load_historical_series(cfg: dict) -> pd.DataFrame:
@@ -19,29 +190,8 @@ def load_historical_series(cfg: dict) -> pd.DataFrame:
     if not files:
         return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
 
-    frames = []
-    for item in files:
-        path = Path(item["path"])
-        if not path.exists():
-            continue
-        source = item.get("source", path.stem)
-        indicator = item.get("indicator", path.stem)
-        scope = item.get("scope", "Comunidad de Madrid")
-
-        df = pd.read_csv(path)
-        df = df.rename(columns={k: v for k, v in SERIES_RENAME.items() if k in df.columns})
-
-        if "date" not in df.columns or "series_value" not in df.columns:
-            continue
-
-        out = df[["date", "series_value"]].copy()
-        out["source"] = source
-        out["indicator"] = indicator
-        out["scope"] = df["scope"] if "scope" in df.columns else scope
-        out["date"] = pd.to_datetime(out["date"], errors="coerce")
-        out["series_value"] = pd.to_numeric(out["series_value"], errors="coerce")
-        out = out.dropna(subset=["date", "series_value"])
-        frames.append(out)
+    frames = [_load_single_source(item) for item in files]
+    frames = [f for f in frames if not f.empty]
 
     if not frames:
         return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])

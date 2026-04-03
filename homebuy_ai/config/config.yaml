@@ -65,6 +65,10 @@ historical:
       indicator: "tipo_hipoteca_medio"
       scope: "España"
       path: "data/input/historical_bde_mortgage_rate.csv"
+    - source: "INE"
+      indicator: "ipv_ccaa"
+      scope: "Comunidad de Madrid"
+      path: "../historico_vivienda_INE.xlsx"
 
 news:
   rss_feeds:

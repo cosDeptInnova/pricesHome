@@ -8,6 +8,21 @@ def normalize(series: pd.Series) -> pd.Series:
     return (series - smin) / (smax - smin)
 
 
+def _describe_driver(row: pd.Series) -> str:
+    components = {
+        "valoración": row["valuation_gap_component"],
+        "accesibilidad macro": row["macro_affordability_component"],
+        "presión oferta": row["inventory_pressure_component"],
+        "señal noticias": row["news_sentiment_component"],
+    }
+    top_factor = max(components, key=components.get)
+    return (
+        f"Factor dominante: {top_factor}. "
+        f"Gap valoración={row['valuation_gap']:.2%}, "
+        f"fair €/m2={row['fair_price_per_m2']:.0f}, anuncio €/m2={row['price_per_m2']:.0f}."
+    )
+
+
 def compute_buy_score(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     weights = cfg["scoring"]["weights"]
     out = df.copy()
@@ -25,11 +40,16 @@ def compute_buy_score(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
     out["news_sentiment_n"] = 1 - normalize(out["news_sentiment"])
 
-    out["buy_score_0_100"] = 100 * (
-        weights["valuation_gap"] * out["valuation_gap_n"]
-        + weights["macro_affordability"] * out["macro_affordability_n"]
-        + weights["inventory_pressure"] * out["inventory_pressure_n"]
-        + weights["news_sentiment"] * out["news_sentiment_n"]
+    out["valuation_gap_component"] = 100 * weights["valuation_gap"] * out["valuation_gap_n"]
+    out["macro_affordability_component"] = 100 * weights["macro_affordability"] * out["macro_affordability_n"]
+    out["inventory_pressure_component"] = 100 * weights["inventory_pressure"] * out["inventory_pressure_n"]
+    out["news_sentiment_component"] = 100 * weights["news_sentiment"] * out["news_sentiment_n"]
+
+    out["buy_score_0_100"] = (
+        out["valuation_gap_component"]
+        + out["macro_affordability_component"]
+        + out["inventory_pressure_component"]
+        + out["news_sentiment_component"]
     )
 
     buy_thr = cfg["scoring"]["thresholds"]["buy"]
@@ -43,4 +63,5 @@ def compute_buy_score(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
         return "WAIT"
 
     out["recommendation"] = out["buy_score_0_100"].apply(label)
+    out["decision_rationale"] = out.apply(_describe_driver, axis=1)
     return out
