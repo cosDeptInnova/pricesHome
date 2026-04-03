@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
 import pandas as pd
+from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 
@@ -12,6 +14,7 @@ class ModelResult:
     segment_models: dict
     mae: float
     feature_cols: list
+    diagnostics: dict
 
 
 def _build_feature_columns() -> list:
@@ -54,6 +57,24 @@ def train_price_model(df: pd.DataFrame, cfg: dict) -> ModelResult:
     preds = global_model.predict(X_test)
     mae = mean_absolute_error(y_test, preds)
 
+    baseline = DummyRegressor(strategy="median")
+    baseline.fit(X_train, y_train)
+    baseline_mae = mean_absolute_error(y_test, baseline.predict(X_test))
+
+    linear = LinearRegression()
+    linear.fit(X_train, y_train)
+    linear_mae = mean_absolute_error(y_test, linear.predict(X_test))
+
+    importances = (
+        pd.Series(global_model.feature_importances_, index=feature_cols)
+        .sort_values(ascending=False)
+        .head(8)
+    )
+    top_features = [
+        {"feature": name, "importance": float(value)}
+        for name, value in importances.items()
+    ]
+
     segment_models = {}
     min_rows = int(cfg["model"].get("segment_min_rows", 12))
     for (municipio, tipologia), group in df.groupby(["municipio", "tipologia"]):
@@ -73,6 +94,13 @@ def train_price_model(df: pd.DataFrame, cfg: dict) -> ModelResult:
         segment_models=segment_models,
         mae=float(mae),
         feature_cols=feature_cols,
+        diagnostics={
+            "mae_random_forest": float(mae),
+            "mae_baseline_median": float(baseline_mae),
+            "mae_linear_regression": float(linear_mae),
+            "rf_vs_baseline_gain_pct": float((baseline_mae - mae) / baseline_mae) if baseline_mae else 0.0,
+            "top_feature_importance": top_features,
+        },
     )
 
 
