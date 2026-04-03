@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 import zipfile
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -17,6 +18,73 @@ SERIES_RENAME = {
 }
 NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 QUARTER_RE = re.compile(r"^(\d{4})T([1-4])$")
+
+
+def _normalize_text(value: str) -> str:
+    txt = unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"\s+", "_", txt.strip().lower())
+
+
+def _read_csv_resilient(path: Path) -> pd.DataFrame:
+    encodings = ["utf-8", "utf-8-sig", "cp1252", "latin-1"]
+    last_error: Exception | None = None
+    separators = [";", "\t", ",", None]
+    for enc in encodings:
+        for sep in separators:
+            try:
+                return pd.read_csv(path, encoding=enc, sep=sep, engine="python", on_bad_lines="skip")
+            except UnicodeDecodeError as exc:
+                last_error = exc
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+    raise ValueError(f"No se pudo leer CSV histórico {path} con codificaciones soportadas. Último error: {last_error}")
+
+
+def _parse_ine_periodic_csv(df: pd.DataFrame, source: str, indicator: str, scope: str) -> pd.DataFrame:
+    norm_cols = {_normalize_text(c): c for c in df.columns}
+    period_col = next((norm_cols[k] for k in norm_cols if "periodo" in k or k == "period"), None)
+
+    if not period_col:
+        return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
+
+    value_col = None
+    candidate_cols = [c for c in df.columns if c != period_col]
+    best_numeric = -1
+    for col in candidate_cols:
+        converted = (
+            df[col]
+            .astype(str)
+            .str.replace(".", "", regex=False)
+            .str.replace(",", ".", regex=False)
+        )
+        numeric_count = pd.to_numeric(converted, errors="coerce").notna().sum()
+        if numeric_count > best_numeric:
+            best_numeric = int(numeric_count)
+            value_col = col
+
+    if not value_col:
+        return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
+
+    out = df[[period_col, value_col]].copy()
+    out.columns = ["period_raw", "series_value_raw"]
+
+    out["date"] = out["period_raw"].astype(str).apply(_parse_quarter_to_date)
+    out["series_value"] = (
+        out["series_value_raw"]
+        .astype(str)
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False)
+    )
+    out["series_value"] = pd.to_numeric(out["series_value"], errors="coerce")
+    out = out.dropna(subset=["date", "series_value"])
+
+    if out.empty:
+        return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
+
+    out["source"] = source
+    out["indicator"] = indicator
+    out["scope"] = scope
+    return out[["source", "indicator", "scope", "date", "series_value"]]
 
 
 def _excel_col_to_idx(cell_ref: str) -> int:
@@ -170,7 +238,11 @@ def _load_single_source(item: dict) -> pd.DataFrame:
     if path.suffix.lower() in {".xlsx", ".xlsm", ".xls"}:
         return _load_ine_xlsx(path, source=source, indicator_prefix=indicator, default_scope=scope)
 
-    df = pd.read_csv(path)
+    df = _read_csv_resilient(path)
+    parsed_ine = _parse_ine_periodic_csv(df, source=source, indicator=indicator, scope=scope)
+    if not parsed_ine.empty:
+        return parsed_ine
+
     df = df.rename(columns={k: v for k, v in SERIES_RENAME.items() if k in df.columns})
 
     if "date" not in df.columns or "series_value" not in df.columns:
