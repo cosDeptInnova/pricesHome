@@ -51,11 +51,47 @@ def _validate_columns(df: pd.DataFrame) -> None:
         raise ValueError(f"Faltan columnas requeridas en listings: {sorted(missing)}")
 
 
+def _looks_like_ine_ipv_dataset(raw_text: str) -> bool:
+    first_chunk = raw_text[:10000].lower()
+    return "índice de precios de vivienda" in first_chunk and "variación trimestral" in first_chunk
+
+
+def _read_csv_flexible(path: str) -> pd.DataFrame:
+    try:
+        return pd.read_csv(path)
+    except pd.errors.ParserError:
+        # CSVs públicos (como INE exportado) pueden traer cabeceras largas y separadores distintos.
+        return pd.read_csv(path, sep=None, engine="python", skip_blank_lines=True)
+
+
 def load_listings_csv(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
-    df["date"] = pd.to_datetime(df["date"])
+    df = _read_csv_flexible(path)
+
+    # Si no tiene esquema de listings, intentamos dar un error accionable.
+    if not REQUIRED_COLUMNS.issubset(set(df.columns)):
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as f:
+                raw_text = f.read()
+        except OSError:
+            raw_text = ""
+
+        if raw_text and _looks_like_ine_ipv_dataset(raw_text):
+            raise ValueError(
+                "El CSV cargado en paths.listings_csv parece ser un dataset agregado del INE (IPV), "
+                "no un archivo de anuncios inmobiliarios. Usa ese fichero en historical.sources "
+                "y deja paths.listings_csv apuntando a un CSV con columnas como "
+                "listing_id,date,municipio,price,m2,rooms,garage,ascensor."
+            )
+
     _validate_columns(df)
-    return _ensure_tipologia(df)
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+
+    numeric_cols = ["price", "m2", "rooms", "garage", "ascensor", "piscina", "zonas_comunes"]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    return _ensure_tipologia(df.dropna(subset=["date"]))
 
 
 def load_listings_api(api_cfg: dict[str, Any]) -> pd.DataFrame:
