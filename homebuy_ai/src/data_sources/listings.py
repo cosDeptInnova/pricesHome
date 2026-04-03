@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from typing import Any
+import unicodedata
 
 import pandas as pd
 import requests
@@ -23,6 +24,12 @@ REQUIRED_COLUMNS = {
 
 CSV_ENCODINGS = ["utf-8", "utf-8-sig", "cp1252", "latin-1"]
 QUARTER_RE = re.compile(r"^(\d{4})T([1-4])$")
+
+
+def _normalize_text(value: str) -> str:
+    txt = unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode("ascii")
+    cleaned = re.sub(r"\W+", "_", txt.strip().lower())
+    return re.sub(r"_+", "_", cleaned).strip("_")
 
 
 def _read_csv_resilient(path: str) -> pd.DataFrame:
@@ -92,16 +99,37 @@ def _is_ine_periodic_csv(df: pd.DataFrame) -> bool:
 
 
 def _build_proxy_listings_from_ine(df: pd.DataFrame, cfg: dict | None = None) -> pd.DataFrame:
-    norm_map = {str(c).strip().lower(): c for c in df.columns}
+    norm_map = {_normalize_text(c): c for c in df.columns}
     period_col = next((norm_map[k] for k in norm_map if "periodo" in k or k == "period"), None)
     if period_col is None:
         raise ValueError("CSV INE sin columna de periodo para crear proxy de listings.")
 
-    value_col = "Total" if "Total" in df.columns else next((c for c in df.columns if c != period_col), None)
+    filtered = df.copy()
+    default_selector = {
+        "total_nacional": "Nacional",
+        "comunidades_y_ciudades_autonomas": "",
+        "general_vivienda_nueva_y_de_segunda_mano": "General",
+        "indices_y_tasas": "Índice",
+    }
+    selector = ((cfg or {}).get("historical", {}).get("sources", [{}])[0].get("selector") or default_selector)
+    for raw_key, expected in selector.items():
+        col = norm_map.get(_normalize_text(raw_key))
+        if not col:
+            continue
+        if str(expected).strip() == "":
+            filtered = filtered[filtered[col].isna() | filtered[col].astype(str).str.strip().eq("")]
+            continue
+        expected_norm = _normalize_text(expected)
+        filtered = filtered[filtered[col].astype(str).apply(_normalize_text).eq(expected_norm)]
+
+    if filtered.empty:
+        filtered = df.copy()
+
+    value_col = "Total" if "Total" in filtered.columns else next((c for c in filtered.columns if c != period_col), None)
     if value_col is None:
         raise ValueError("CSV INE sin columna de valor para crear proxy de listings.")
 
-    tmp = df[[period_col, value_col]].copy()
+    tmp = filtered[[period_col, value_col]].copy()
     tmp.columns = ["period_raw", "series_value_raw"]
     tmp["date"] = tmp["period_raw"].apply(_parse_quarter_to_date)
     tmp["series_value"] = (

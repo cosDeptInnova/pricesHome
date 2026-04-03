@@ -42,4 +42,19 @@ def resolve_data_path(path: str | Path) -> Path:
         if best_match is None or score > best_match[0]:
             best_match = (score, file_path)
 
-    return best_match[1] if best_match else candidate
+    if best_match:
+        return best_match[1]
+
+    fallback_dirs = [
+        PROJECT_ROOT / "data" / "input",
+        PROJECT_ROOT,
+        PROJECT_ROOT.parent,
+    ]
+    for base_dir in fallback_dirs:
+        if not base_dir.exists():
+            continue
+        for file_path in base_dir.rglob(candidate.name):
+            if file_path.is_file():
+                return file_path
+
+    return candidate
