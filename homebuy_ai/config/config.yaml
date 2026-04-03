@@ -4,7 +4,7 @@ project:
   region_focus: ["Comunidad de Madrid", "Corredor del Henares"]
 
 paths:
-  listings_csv: "data/input/listings_sample.csv"
+  listings_csv: "data/input/INE_Vivienda.csv"
   output_dir: "data/output"
 
 listings:
@@ -39,11 +39,8 @@ filters:
   min_m2: 70
   max_price: 500000
   municipios_prioritarios:
-    - "Alcalá de Henares"
-    - "Torrejón de Ardoz"
-    - "Coslada"
-    - "San Fernando de Henares"
-    - "Madrid"
+    - "Mejorada del Campo"
+    - "Velilla de San Antonio"
 
 macro:
   euribor_12m: 3.10
