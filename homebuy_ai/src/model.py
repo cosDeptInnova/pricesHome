@@ -36,10 +36,18 @@ def _build_feature_columns() -> list:
     ]
 
 
+def _prepare_features(df: pd.DataFrame, feature_cols: list) -> pd.DataFrame:
+    out = df.copy()
+    for col in feature_cols:
+        if col not in out.columns:
+            out[col] = 0.0
+    return out[feature_cols].apply(pd.to_numeric, errors="coerce").fillna(0)
+
+
 def train_price_model(df: pd.DataFrame, cfg: dict) -> ModelResult:
     target_col = cfg["model"]["target_col"]
     feature_cols = _build_feature_columns()
-    X = df[feature_cols].fillna(0)
+    X = _prepare_features(df, feature_cols)
     y = df[target_col]
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -80,7 +88,7 @@ def train_price_model(df: pd.DataFrame, cfg: dict) -> ModelResult:
     for (municipio, tipologia), group in df.groupby(["municipio", "tipologia"]):
         if len(group) < min_rows:
             continue
-        X_seg = group[feature_cols].fillna(0)
+        X_seg = _prepare_features(group, feature_cols)
         y_seg = group[target_col]
         m = RandomForestRegressor(
             n_estimators=200,
@@ -105,7 +113,7 @@ def train_price_model(df: pd.DataFrame, cfg: dict) -> ModelResult:
 
 
 def infer_fair_price_per_m2(df: pd.DataFrame, model_result: ModelResult) -> pd.Series:
-    X_all = df[model_result.feature_cols].fillna(0)
+    X_all = _prepare_features(df, model_result.feature_cols)
     preds = model_result.global_model.predict(X_all)
     out = pd.Series(preds, index=df.index, name="fair_price_per_m2")
 
