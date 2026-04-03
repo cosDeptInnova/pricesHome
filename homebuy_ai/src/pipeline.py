@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from src.ai_briefing import generate_briefing
 from src.data_sources.historical import build_historical_features, load_historical_series
-from src.data_sources.listings import load_listings
+import src.data_sources.listings as listings_source
 from src.data_sources.macro import load_macro_snapshot
 from src.data_sources.news import load_news_signals
 from src.features import build_training_frame, filter_listings
@@ -24,7 +24,11 @@ def run_pipeline(cfg: dict) -> dict:
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     logger.info("run_id=%s | 1) Cargando datos", run_id)
-    listings = load_listings(cfg)
+    if hasattr(listings_source, "load_listings"):
+        listings = listings_source.load_listings(cfg)
+    else:
+        logger.warning("load_listings no disponible; usando fallback load_listings_csv")
+        listings = listings_source.load_listings_csv(cfg["paths"]["listings_csv"])
     macro_df = load_macro_snapshot(cfg)
     news_df = load_news_signals(cfg)
     historical_df = load_historical_series(cfg)
