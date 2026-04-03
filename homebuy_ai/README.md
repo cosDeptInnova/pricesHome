@@ -102,6 +102,9 @@ Si Kafka no está disponible o falta dependencia, la ejecución **no falla**: se
 El loader ahora intenta codificaciones `utf-8`, `utf-8-sig`, `cp1252` y `latin-1`, además de separadores `;`, tab y `,`.
 
 - Si usas `INE_Vivienda.csv` (formato INE con `Periodo` + `Índice`), configúralo en `historical.sources`.
+- Puedes filtrar el CSV INE por dimensiones usando:
+  - `selector` (diccionario columna->valor, insensible a acentos/mayúsculas)
+  - `scope_column` (columna a usar como ámbito territorial en salida)
 - Si ese CSV se coloca por error en `paths.listings_csv`, el sistema devuelve un error explicativo indicando que no es un fichero de listings.
 
 

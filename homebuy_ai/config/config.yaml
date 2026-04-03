@@ -4,7 +4,7 @@ project:
   region_focus: ["Comunidad de Madrid", "Corredor del Henares"]
 
 paths:
-  listings_csv: "data/input/INE_Vivienda.csv"
+  listings_csv: "data/input/listings_sample.csv"
   output_dir: "data/output"
 
 listings:
@@ -39,8 +39,9 @@ filters:
   min_m2: 70
   max_price: 500000
   municipios_prioritarios:
-    - "Mejorada del Campo"
-    - "Velilla de San Antonio"
+    - "Alcalá de Henares"
+    - "Torrejón de Ardoz"
+    - "San Fernando de Henares"
 
 macro:
   euribor_12m: 3.10
@@ -51,21 +52,15 @@ macro:
 historical:
   sources:
     - source: "INE"
-      indicator: "ipc_yoy"
-      scope: "Comunidad de Madrid"
-      path: "data/input/historical_ine_ipc.csv"
-    - source: "MITMA"
-      indicator: "precio_vivienda_m2"
-      scope: "Comunidad de Madrid"
-      path: "data/input/historical_mitma_price_m2.csv"
-    - source: "BdE"
-      indicator: "tipo_hipoteca_medio"
-      scope: "España"
-      path: "data/input/historical_bde_mortgage_rate.csv"
-    - source: "INE"
-      indicator: "ipv_ccaa"
-      scope: "Comunidad de Madrid"
-      path: "../historico_vivienda_INE.xlsx"
+      indicator: "ipv_nacional_general_indice"
+      scope: "Nacional"
+      path: "../INE_Vivienda.csv"
+      selector:
+        total_nacional: "Nacional"
+        comunidades_y_ciudades_autonomas: ""
+        general_vivienda_nueva_y_de_segunda_mano: "General"
+        indices_y_tasas: "Índice"
+      scope_column: "Total Nacional"
 
 news:
   rss_feeds:
