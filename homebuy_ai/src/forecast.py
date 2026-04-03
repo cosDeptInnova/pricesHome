@@ -6,7 +6,17 @@ from sklearn.linear_model import LinearRegression
 
 def build_forecast_frame(scored_df: pd.DataFrame, horizon_months: int = 6) -> pd.DataFrame:
     df = scored_df.copy()
-    df["month"] = pd.to_datetime(df["date"]).dt.to_period("M").dt.to_timestamp()
+
+    if "tipologia" not in df.columns:
+        fallback_col = next((c for c in ["tipo", "tipo_vivienda", "property_type"] if c in df.columns), None)
+        df["tipologia"] = df[fallback_col].astype(str) if fallback_col else "media"
+
+    if "date" not in df.columns:
+        df["date"] = pd.Timestamp.utcnow().tz_localize(None).normalize()
+
+    df["month"] = pd.to_datetime(df["date"], errors="coerce").dt.to_period("M").dt.to_timestamp()
+    current_month = pd.Timestamp.utcnow().tz_localize(None).to_period("M").to_timestamp()
+    df["month"] = df["month"].fillna(current_month)
 
     monthly = (
         df.groupby(["municipio", "tipologia", "month"], as_index=False)
