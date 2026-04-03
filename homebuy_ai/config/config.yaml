@@ -99,6 +99,7 @@ scoring:
     buy: 70
     wait: 45
 
+
 research:
   top_prompts: 12
   engine: "thread_pool" # thread_pool | queue | kafka | flink

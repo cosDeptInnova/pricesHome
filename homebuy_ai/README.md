@@ -97,6 +97,13 @@ pip install kafka-python
 
 Si Kafka no está disponible o falta dependencia, la ejecución **no falla**: se conserva `research_prompts.json` y se registra el estado en `summary.json > research_dispatch`.
 
+### CSV INE (encoding/parseo)
+
+El loader ahora intenta codificaciones `utf-8`, `utf-8-sig`, `cp1252` y `latin-1`, además de separadores `;`, tab y `,`.
+
+- Si usas `INE_Vivienda.csv` (formato INE con `Periodo` + `Índice`), configúralo en `historical.sources`.
+- Si ese CSV se coloca por error en `paths.listings_csv`, el sistema devuelve un error explicativo indicando que no es un fichero de listings.
+
 
 El pipeline ahora detecta variaciones históricas de índices (trimestrales/anuales) y crea prompts de búsqueda para investigación online:
 
@@ -109,4 +116,3 @@ Además, se define un plan de orquestación (`research_orchestration`) configura
 - `thread_pool` (MVP recomendado para herramienta funcional).
 - `queue` (cola de trabajos con reintentos).
 - `kafka` / `flink` (escalado avanzado cuando haya alto volumen continuo).
-

@@ -18,6 +18,23 @@ REQUIRED_COLUMNS = {
 }
 
 
+CSV_ENCODINGS = ["utf-8", "utf-8-sig", "cp1252", "latin-1"]
+
+
+def _read_csv_resilient(path: str) -> pd.DataFrame:
+    last_error: Exception | None = None
+    separators = [None, ";", "\t", ","]
+    for enc in CSV_ENCODINGS:
+        for sep in separators:
+            try:
+                return pd.read_csv(path, encoding=enc, sep=sep, engine="python", on_bad_lines="skip")
+            except UnicodeDecodeError as exc:
+                last_error = exc
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+    raise ValueError(f"No se pudo leer CSV en {path} con codificaciones soportadas: {CSV_ENCODINGS}. Error: {last_error}")
+
+
 def _ensure_tipologia(df: pd.DataFrame) -> pd.DataFrame:
     if "tipologia" in df.columns:
         return df
@@ -48,13 +65,16 @@ def _normalize_columns(df: pd.DataFrame, mapping: dict[str, str] | None) -> pd.D
 def _validate_columns(df: pd.DataFrame) -> None:
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
-        raise ValueError(f"Faltan columnas requeridas en listings: {sorted(missing)}")
+        raise ValueError(
+            "Faltan columnas requeridas en listings: "
+            f"{sorted(missing)}. Si este CSV es de INE/IPV (Periodo/Índice), configúralo en historical.sources y no en paths.listings_csv."
+        )
 
 
 def load_listings_csv(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
-    df["date"] = pd.to_datetime(df["date"])
+    df = _read_csv_resilient(path)
     _validate_columns(df)
+    df["date"] = pd.to_datetime(df["date"])
     return _ensure_tipologia(df)
 
 
