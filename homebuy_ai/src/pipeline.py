@@ -1,4 +1,5 @@
 from pathlib import Path
+import inspect
 import json
 from datetime import datetime, timezone
 
@@ -44,7 +45,19 @@ def run_pipeline(cfg: dict) -> dict:
     logger.info("run_id=%s | listings_filtrados=%s", run_id, len(listings_f))
 
     logger.info("run_id=%s | 3) Feature frame", run_id)
-    train_df = build_training_frame(listings_f, macro_df, news_df, historical_features)
+    build_frame_params = inspect.signature(build_training_frame).parameters
+    if "historical_features" in build_frame_params:
+        train_df = build_training_frame(
+            listings_f,
+            macro_df,
+            news_df,
+            historical_features=historical_features,
+        )
+    else:
+        logger.warning(
+            "build_training_frame sin soporte historical_features; continuando en modo compatibilidad"
+        )
+        train_df = build_training_frame(listings_f, macro_df, news_df)
 
     logger.info("run_id=%s | 4) Entrenando modelo", run_id)
     model_result = train_price_model(train_df, cfg)
