@@ -1,13 +1,20 @@
 from openai import OpenAI
 
 
+from src.logger import get_logger
+
+logger = get_logger("ai_briefing")
+
+
 def generate_briefing(cfg: dict, summary_payload: dict) -> str:
     oai = cfg.get("openai", {})
     if not oai.get("enabled", False):
+        logger.info("OpenAI briefing desactivado por configuración (openai.enabled=false)")
         return "OpenAI desactivado en config. Briefing IA omitido."
 
     api_key = oai.get("api_key", "").strip()
     if not api_key or "PUT_YOUR_OPENAI_API_KEY_HERE" in api_key:
+        logger.warning("OpenAI habilitado pero sin API key válida; se omite briefing IA")
         return "API key OpenAI no configurada. Briefing IA omitido."
 
     client = OpenAI(api_key=api_key)
@@ -26,5 +33,6 @@ Genera:
 Sé concreto y accionable para primera vivienda en Madrid y Corredor del Henares.
 """
 
+    logger.info("Generando briefing con OpenAI model=%s", model)
     resp = client.responses.create(model=model, input=prompt)
     return resp.output_text.strip()

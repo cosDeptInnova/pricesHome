@@ -19,6 +19,7 @@ def load_news_signals(cfg: dict) -> pd.DataFrame:
             if getattr(parsed, "bozo", False):
                 logger.warning("Feed con formato problemático: %s", url)
             entries = parsed.entries[:30]
+            logger.info("Feed leído: %s | entradas=%s", url, len(entries))
         except Exception as ex:
             logger.warning("No se pudo leer feed %s: %s", url, ex)
             entries = []

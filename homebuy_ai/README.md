@@ -26,6 +26,20 @@ Edita `config/config.yaml`:
 python run.py
 ```
 
+### Validar uso de internet y OpenAI
+
+Si dudas de si se están usando fuentes online o LLM:
+
+- Revisa `data/output/logs/homebuy_ai_*.log`:
+  - `Feed leído: ... | entradas=N` confirma lectura de RSS.
+  - `OpenAI habilitado pero sin API key válida` indica que **no** se llamó al LLM.
+  - `Generando briefing con OpenAI model=...` confirma llamada al LLM.
+- Revisa `data/output/summary.json`:
+  - `internet_news_ok=true/false`
+  - `openai_briefing_expected=true/false`
+
+> Nota: con `openai.api_key: "PUT_YOUR_OPENAI_API_KEY_HERE"` el briefing IA se omite por diseño.
+
 Salidas en `data/output/`:
 
 - `scored_all.csv`
