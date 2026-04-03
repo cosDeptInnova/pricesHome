@@ -129,8 +129,6 @@ def run_pipeline(cfg: dict) -> dict:
 
     segment_models = getattr(model_result, "segment_models", {}) or {}
 
-    segment_models = getattr(model_result, "segment_models", {}) or {}
-
     summary = {
         "run_id": run_id,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -154,6 +152,12 @@ def run_pipeline(cfg: dict) -> dict:
         "macro": macro_df.iloc[0].to_dict(),
         "news": news_df.iloc[0].to_dict(),
         "historical_features": historical_features,
+        "internet_news_ok": bool(news_df.iloc[0].get("news_volume", 0) > 0),
+        "openai_briefing_expected": bool(
+            cfg.get("openai", {}).get("enabled", False)
+            and cfg.get("openai", {}).get("api_key", "").strip()
+            and "PUT_YOUR_OPENAI_API_KEY_HERE" not in cfg.get("openai", {}).get("api_key", "")
+        ),
     }
 
     brief = generate_briefing(cfg, summary)
