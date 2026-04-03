@@ -22,7 +22,8 @@ QUARTER_RE = re.compile(r"^(\d{4})T([1-4])$")
 
 def _normalize_text(value: str) -> str:
     txt = unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode("ascii")
-    return re.sub(r"\s+", "_", txt.strip().lower())
+    cleaned = re.sub(r"\W+", "_", txt.strip().lower())
+    return re.sub(r"_+", "_", cleaned).strip("_")
 
 
 def _read_csv_resilient(path: Path) -> pd.DataFrame:
@@ -40,19 +41,50 @@ def _read_csv_resilient(path: Path) -> pd.DataFrame:
     raise ValueError(f"No se pudo leer CSV histórico {path} con codificaciones soportadas. Último error: {last_error}")
 
 
-def _parse_ine_periodic_csv(df: pd.DataFrame, source: str, indicator: str, scope: str) -> pd.DataFrame:
+def _parse_ine_periodic_csv(
+    df: pd.DataFrame,
+    source: str,
+    indicator: str,
+    scope: str,
+    selector: dict[str, str] | None = None,
+    scope_column: str | None = None,
+) -> pd.DataFrame:
     norm_cols = {_normalize_text(c): c for c in df.columns}
     period_col = next((norm_cols[k] for k in norm_cols if "periodo" in k or k == "period"), None)
 
     if not period_col:
         return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
 
+    filtered = df.copy()
+    if selector:
+        for raw_key, expected in selector.items():
+            normalized_key = _normalize_text(raw_key)
+            original_col = norm_cols.get(normalized_key)
+            if original_col is None:
+                continue
+            if str(expected).strip() == "":
+                filtered = filtered[
+                    filtered[original_col].isna()
+                    | filtered[original_col].astype(str).str.strip().eq("")
+                ]
+                continue
+            expected_norm = _normalize_text(str(expected))
+            filtered = filtered[
+                filtered[original_col]
+                .astype(str)
+                .apply(_normalize_text)
+                .eq(expected_norm)
+            ]
+
+    if filtered.empty:
+        return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
+
     value_col = None
-    candidate_cols = [c for c in df.columns if c != period_col]
+    candidate_cols = [c for c in filtered.columns if c != period_col]
     best_numeric = -1
     for col in candidate_cols:
         converted = (
-            df[col]
+            filtered[col]
             .astype(str)
             .str.replace(".", "", regex=False)
             .str.replace(",", ".", regex=False)
@@ -65,8 +97,28 @@ def _parse_ine_periodic_csv(df: pd.DataFrame, source: str, indicator: str, scope
     if not value_col:
         return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
 
-    out = df[[period_col, value_col]].copy()
+    out = filtered[[period_col, value_col]].copy()
     out.columns = ["period_raw", "series_value_raw"]
+
+    resolved_scope_col = None
+    if scope_column:
+        resolved_scope_col = norm_cols.get(_normalize_text(scope_column))
+    if resolved_scope_col is None:
+        for candidate in (
+            "comunidades_y_ciudades_autonomas",
+            "comunidades_autonomas",
+            "ccaa",
+            "ambito_territorial",
+            "total_nacional",
+        ):
+            resolved_scope_col = norm_cols.get(candidate)
+            if resolved_scope_col:
+                break
+    if resolved_scope_col and resolved_scope_col in filtered.columns:
+        out["scope"] = filtered[resolved_scope_col].fillna(scope).astype(str).str.strip()
+        out["scope"] = out["scope"].replace("", scope)
+    else:
+        out["scope"] = scope
 
     out["date"] = out["period_raw"].astype(str).apply(_parse_quarter_to_date)
     out["series_value"] = (
@@ -83,7 +135,6 @@ def _parse_ine_periodic_csv(df: pd.DataFrame, source: str, indicator: str, scope
 
     out["source"] = source
     out["indicator"] = indicator
-    out["scope"] = scope
     return out[["source", "indicator", "scope", "date", "series_value"]]
 
 
@@ -239,7 +290,14 @@ def _load_single_source(item: dict) -> pd.DataFrame:
         return _load_ine_xlsx(path, source=source, indicator_prefix=indicator, default_scope=scope)
 
     df = _read_csv_resilient(path)
-    parsed_ine = _parse_ine_periodic_csv(df, source=source, indicator=indicator, scope=scope)
+    parsed_ine = _parse_ine_periodic_csv(
+        df,
+        source=source,
+        indicator=indicator,
+        scope=scope,
+        selector=item.get("selector"),
+        scope_column=item.get("scope_column"),
+    )
     if not parsed_ine.empty:
         return parsed_ine
 
