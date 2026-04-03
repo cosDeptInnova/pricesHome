@@ -5,6 +5,8 @@ from typing import Any
 import pandas as pd
 import requests
 
+from src.path_utils import resolve_data_path
+
 
 REQUIRED_COLUMNS = {
     "listing_id",
@@ -72,7 +74,8 @@ def _validate_columns(df: pd.DataFrame) -> None:
 
 
 def load_listings_csv(path: str) -> pd.DataFrame:
-    df = _read_csv_resilient(path)
+    resolved_path = resolve_data_path(path)
+    df = _read_csv_resilient(str(resolved_path))
     _validate_columns(df)
     df["date"] = pd.to_datetime(df["date"])
     return _ensure_tipologia(df)

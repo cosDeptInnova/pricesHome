@@ -8,6 +8,8 @@ import xml.etree.ElementTree as ET
 
 import pandas as pd
 
+from src.path_utils import resolve_data_path
+
 
 SERIES_RENAME = {
     "value": "series_value",
@@ -278,7 +280,7 @@ def _load_ine_xlsx(path: Path, source: str, indicator_prefix: str, default_scope
 
 
 def _load_single_source(item: dict) -> pd.DataFrame:
-    path = Path(item["path"])
+    path = resolve_data_path(item["path"])
     if not path.exists():
         return pd.DataFrame(columns=["source", "indicator", "scope", "date", "series_value"])
 
