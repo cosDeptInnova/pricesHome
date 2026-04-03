@@ -1,0 +1,11 @@
+[2026-04-03 03:48:56] INFO - pipeline - run_id=20260403T014856Z | 1) Cargando datos
+[2026-04-03 03:48:56] WARNING - pipeline - load_listings no disponible; usando fallback load_listings_csv
+[2026-04-03 03:48:57] WARNING - news - Feed con formato problemático: https://e00-expansion.uecdn.es/rss/empresas.xml
+[2026-04-03 03:48:57] INFO - news - Noticias procesadas=80 ratio_keywords=0.013 sentiment=-0.575
+[2026-04-03 03:48:57] INFO - pipeline - run_id=20260403T014856Z | listings=12 historical_rows=0
+[2026-04-03 03:48:57] INFO - pipeline - run_id=20260403T014856Z | 2) Filtrando listings
+[2026-04-03 03:48:57] INFO - pipeline - run_id=20260403T014856Z | listings_filtrados=10
+[2026-04-03 03:48:57] INFO - pipeline - run_id=20260403T014856Z | 3) Feature frame
+[2026-04-03 03:48:57] WARNING - pipeline - build_training_frame sin soporte historical_features; continuando en modo compatibilidad
+[2026-04-03 03:48:57] INFO - pipeline - run_id=20260403T014856Z | 4) Entrenando modelo
+[2026-04-03 03:48:57] INFO - pipeline - run_id=20260403T014856Z | 5) Scoring

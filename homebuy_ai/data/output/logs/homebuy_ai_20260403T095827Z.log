@@ -1,0 +1,2 @@
+[2026-04-03 11:58:27] INFO - pipeline - run_id=20260403T095827Z | 1) Cargando datos
+[2026-04-03 11:58:27] WARNING - pipeline - load_listings no disponible; usando fallback load_listings_csv

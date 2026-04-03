@@ -1,0 +1,35 @@
+municipio,tipologia,month,forecast_price_per_m2,series
+Alcalá de Henares,media,2026-01-01,2865.1685393258426,historical
+Alcalá de Henares,media,2026-02-01,2877.777777777778,historical
+Alcalá de Henares,media,2026-03-01,2880.4347826086955,historical
+Madrid,media,2026-02-01,4414.893617021276,historical
+Madrid,media,2026-03-01,4421.0526315789475,historical
+San Fernando de Henares,media,2026-02-01,2848.1012658227846,historical
+San Fernando de Henares,media,2026-03-01,2850.0,historical
+Torrejón de Ardoz,media,2026-01-01,2829.268292682927,historical
+Torrejón de Ardoz,media,2026-02-01,2831.3253012048194,historical
+Torrejón de Ardoz,media,2026-03-01,2823.529411764706,historical
+Alcalá de Henares,media,2026-04-01,2889.726609853625,forecast
+Alcalá de Henares,media,2026-05-01,2897.3597314950516,forecast
+Alcalá de Henares,media,2026-06-01,2904.992853136478,forecast
+Alcalá de Henares,media,2026-07-01,2912.6259747779045,forecast
+Alcalá de Henares,media,2026-08-01,2920.259096419331,forecast
+Alcalá de Henares,media,2026-09-01,2927.8922180607574,forecast
+Madrid,media,2026-04-01,4427.211646136619,forecast
+Madrid,media,2026-05-01,4433.37066069429,forecast
+Madrid,media,2026-06-01,4439.529675251961,forecast
+Madrid,media,2026-07-01,4445.688689809632,forecast
+Madrid,media,2026-08-01,4451.847704367303,forecast
+Madrid,media,2026-09-01,4458.006718924974,forecast
+San Fernando de Henares,media,2026-04-01,2851.8987341772154,forecast
+San Fernando de Henares,media,2026-05-01,2853.7974683544307,forecast
+San Fernando de Henares,media,2026-06-01,2855.696202531646,forecast
+San Fernando de Henares,media,2026-07-01,2857.5949367088615,forecast
+San Fernando de Henares,media,2026-08-01,2859.493670886077,forecast
+San Fernando de Henares,media,2026-09-01,2861.3924050632922,forecast
+Torrejón de Ardoz,media,2026-04-01,2822.3021209659296,forecast
+Torrejón de Ardoz,media,2026-05-01,2819.432680506819,forecast
+Torrejón de Ardoz,media,2026-06-01,2816.5632400477084,forecast
+Torrejón de Ardoz,media,2026-07-01,2813.693799588598,forecast
+Torrejón de Ardoz,media,2026-08-01,2810.824359129487,forecast
+Torrejón de Ardoz,media,2026-09-01,2807.9549186703766,forecast

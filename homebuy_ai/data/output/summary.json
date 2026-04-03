@@ -1,0 +1,128 @@
+{
+  "run_id": "20260403T015347Z",
+  "generated_at_utc": "2026-04-03T01:53:48.806348+00:00",
+  "log_file": "data\\output\\logs\\homebuy_ai_20260403T015347Z.log",
+  "model_mae_price_per_m2": 57.1468697697303,
+  "num_listings_scored": 10,
+  "avg_buy_score": 53.49311848010577,
+  "segmented_models_trained": 0,
+  "top_recommendations": [
+    {
+      "listing_id": 1,
+      "municipio": "Alcalá de Henares",
+      "tipologia": "media",
+      "price": 265000,
+      "m2": 92,
+      "buy_score_0_100": 77.5,
+      "recommendation": "BUY_WINDOW",
+      "decision_rationale": "Factor dominante: valoración. Gap valoración=4.04%, fair €/m2=3002, anuncio €/m2=2880."
+    },
+    {
+      "listing_id": 6,
+      "municipio": "Alcalá de Henares",
+      "tipologia": "media",
+      "price": 259000,
+      "m2": 90,
+      "buy_score_0_100": 76.29882495141891,
+      "recommendation": "BUY_WINDOW",
+      "decision_rationale": "Factor dominante: valoración. Gap valoración=3.78%, fair €/m2=2991, anuncio €/m2=2878."
+    },
+    {
+      "listing_id": 11,
+      "municipio": "Alcalá de Henares",
+      "tipologia": "media",
+      "price": 255000,
+      "m2": 89,
+      "buy_score_0_100": 75.08466225561634,
+      "recommendation": "BUY_WINDOW",
+      "decision_rationale": "Factor dominante: valoración. Gap valoración=3.51%, fair €/m2=2969, anuncio €/m2=2865."
+    },
+    {
+      "listing_id": 7,
+      "municipio": "Torrejón de Ardoz",
+      "tipologia": "media",
+      "price": 235000,
+      "m2": 83,
+      "buy_score_0_100": 61.09933955927209,
+      "recommendation": "NEUTRAL",
+      "decision_rationale": "Factor dominante: presión oferta. Gap valoración=0.43%, fair €/m2=2844, anuncio €/m2=2831."
+    },
+    {
+      "listing_id": 2,
+      "municipio": "Torrejón de Ardoz",
+      "tipologia": "media",
+      "price": 240000,
+      "m2": 85,
+      "buy_score_0_100": 60.731666396925895,
+      "recommendation": "NEUTRAL",
+      "decision_rationale": "Factor dominante: presión oferta. Gap valoración=0.35%, fair €/m2=2834, anuncio €/m2=2824."
+    },
+    {
+      "listing_id": 12,
+      "municipio": "Torrejón de Ardoz",
+      "tipologia": "media",
+      "price": 232000,
+      "m2": 82,
+      "buy_score_0_100": 59.67894968874538,
+      "recommendation": "NEUTRAL",
+      "decision_rationale": "Factor dominante: presión oferta. Gap valoración=0.12%, fair €/m2=2833, anuncio €/m2=2829."
+    },
+    {
+      "listing_id": 4,
+      "municipio": "San Fernando de Henares",
+      "tipologia": "media",
+      "price": 228000,
+      "m2": 80,
+      "buy_score_0_100": 40.28560788708591,
+      "recommendation": "WAIT",
+      "decision_rationale": "Factor dominante: valoración. Gap valoración=0.25%, fair €/m2=2857, anuncio €/m2=2850."
+    },
+    {
+      "listing_id": 9,
+      "municipio": "San Fernando de Henares",
+      "tipologia": "media",
+      "price": 225000,
+      "m2": 79,
+      "buy_score_0_100": 38.863328070749716,
+      "recommendation": "WAIT",
+      "decision_rationale": "Factor dominante: valoración. Gap valoración=-0.06%, fair €/m2=2846, anuncio €/m2=2848."
+    },
+    {
+      "listing_id": 10,
+      "municipio": "Madrid",
+      "tipologia": "media",
+      "price": 415000,
+      "m2": 94,
+      "buy_score_0_100": 22.88880599124353,
+      "recommendation": "WAIT",
+      "decision_rationale": "Factor dominante: accesibilidad macro. Gap valoración=-3.57%, fair €/m2=4263, anuncio €/m2=4415."
+    },
+    {
+      "listing_id": 5,
+      "municipio": "Madrid",
+      "tipologia": "media",
+      "price": 420000,
+      "m2": 95,
+      "buy_score_0_100": 22.5,
+      "recommendation": "WAIT",
+      "decision_rationale": "Factor dominante: accesibilidad macro. Gap valoración=-3.66%, fair €/m2=4265, anuncio €/m2=4421."
+    }
+  ],
+  "macro": {
+    "euribor_12m": 3.1,
+    "inflation_yoy": 2.9,
+    "unemployment_rate": 10.8,
+    "ibex_monthly_change_pct": 1.2
+  },
+  "news": {
+    "news_volume": 80,
+    "news_keyword_ratio": 0.0125,
+    "news_sentiment": -0.575,
+    "snapshot_utc": "2026-04-03T01:53:48.610798+00:00"
+  },
+  "historical_features": {
+    "hist_series_count": 0,
+    "hist_latest_mean": 0.0,
+    "hist_trend_6m_mean": 0.0
+  }
+}
