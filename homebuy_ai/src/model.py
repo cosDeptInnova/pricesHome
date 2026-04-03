@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
 import pandas as pd
+from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 
@@ -12,6 +14,7 @@ class ModelResult:
     segment_models: dict
     mae: float
     feature_cols: list
+    diagnostics: dict
 
 
 def _build_feature_columns() -> list:
@@ -33,10 +36,18 @@ def _build_feature_columns() -> list:
     ]
 
 
+def _prepare_features(df: pd.DataFrame, feature_cols: list) -> pd.DataFrame:
+    out = df.copy()
+    for col in feature_cols:
+        if col not in out.columns:
+            out[col] = 0.0
+    return out[feature_cols].apply(pd.to_numeric, errors="coerce").fillna(0)
+
+
 def train_price_model(df: pd.DataFrame, cfg: dict) -> ModelResult:
     target_col = cfg["model"]["target_col"]
     feature_cols = _build_feature_columns()
-    X = df[feature_cols].fillna(0)
+    X = _prepare_features(df, feature_cols)
     y = df[target_col]
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -54,12 +65,30 @@ def train_price_model(df: pd.DataFrame, cfg: dict) -> ModelResult:
     preds = global_model.predict(X_test)
     mae = mean_absolute_error(y_test, preds)
 
+    baseline = DummyRegressor(strategy="median")
+    baseline.fit(X_train, y_train)
+    baseline_mae = mean_absolute_error(y_test, baseline.predict(X_test))
+
+    linear = LinearRegression()
+    linear.fit(X_train, y_train)
+    linear_mae = mean_absolute_error(y_test, linear.predict(X_test))
+
+    importances = (
+        pd.Series(global_model.feature_importances_, index=feature_cols)
+        .sort_values(ascending=False)
+        .head(8)
+    )
+    top_features = [
+        {"feature": name, "importance": float(value)}
+        for name, value in importances.items()
+    ]
+
     segment_models = {}
     min_rows = int(cfg["model"].get("segment_min_rows", 12))
     for (municipio, tipologia), group in df.groupby(["municipio", "tipologia"]):
         if len(group) < min_rows:
             continue
-        X_seg = group[feature_cols].fillna(0)
+        X_seg = _prepare_features(group, feature_cols)
         y_seg = group[target_col]
         m = RandomForestRegressor(
             n_estimators=200,
@@ -73,11 +102,18 @@ def train_price_model(df: pd.DataFrame, cfg: dict) -> ModelResult:
         segment_models=segment_models,
         mae=float(mae),
         feature_cols=feature_cols,
+        diagnostics={
+            "mae_random_forest": float(mae),
+            "mae_baseline_median": float(baseline_mae),
+            "mae_linear_regression": float(linear_mae),
+            "rf_vs_baseline_gain_pct": float((baseline_mae - mae) / baseline_mae) if baseline_mae else 0.0,
+            "top_feature_importance": top_features,
+        },
     )
 
 
 def infer_fair_price_per_m2(df: pd.DataFrame, model_result: ModelResult) -> pd.Series:
-    X_all = df[model_result.feature_cols].fillna(0)
+    X_all = _prepare_features(df, model_result.feature_cols)
     preds = model_result.global_model.predict(X_all)
     out = pd.Series(preds, index=df.index, name="fair_price_per_m2")
 

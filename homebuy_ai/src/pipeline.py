@@ -161,6 +161,7 @@ def run_pipeline(cfg: dict) -> dict:
         "log_file": str(log_file),
         "events_jsonl": str(json_events_path),
         "model_mae_price_per_m2": model_result.mae,
+        "model_diagnostics": getattr(model_result, "diagnostics", {}),
         "num_listings_scored": int(len(scored)),
         "avg_buy_score": float(scored["buy_score_0_100"].mean()),
         "segmented_models_trained": int(len(segment_models)),

@@ -17,7 +17,7 @@ def _fallback_briefing(summary_payload: dict) -> str:
         f"- Score medio: {score:.2f}\n"
         f"- Listings analizados: {summary_payload.get('num_listings_scored', 0)}\n"
         f"- Recomendación operativa: {rec}\n"
-        "Acción: revisar dependencias openai/httpx o desactivar openai.enabled temporalmente."
+        "Acción: revisar dependencias openai/httpx (recomendado: openai>=1.40,<2 + httpx<0.28) o desactivar openai.enabled temporalmente."
     )
 
 
@@ -44,6 +44,7 @@ Genera:
 2) Riesgos macro/geopolíticos clave
 3) Señales a vigilar 30-90 días
 4) Recomendación clara: comprar ahora / esperar / negociar fuerte
+5) Explica brevemente qué pistas aportan los modelos (MAE vs baseline, MAE regresión lineal y top variables)
 Sé concreto y accionable para primera vivienda en Madrid y Corredor del Henares.
 """
 
@@ -52,6 +53,16 @@ Sé concreto y accionable para primera vivienda en Madrid y Corredor del Henares
         logger.info("Generando briefing con OpenAI model=%s", model)
         resp = client.responses.create(model=model, input=prompt)
         return resp.output_text.strip()
+    except TypeError as exc:
+        if "proxies" in str(exc):
+            logger.exception(
+                "Incompatibilidad openai/httpx detectada (arg proxies). "
+                "Suele resolverse fijando httpx<0.28 con openai 1.x: %s",
+                exc,
+            )
+        else:
+            logger.exception("Fallo de tipo generando briefing OpenAI; aplicando fallback local: %s", exc)
+        return _fallback_briefing(summary_payload)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Fallo generando briefing OpenAI; aplicando fallback local: %s", exc)
         return _fallback_briefing(summary_payload)
