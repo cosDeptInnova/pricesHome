@@ -17,6 +17,31 @@ from src.scoring import compute_buy_score
 logger = get_logger("pipeline")
 
 
+
+
+def _fill_missing_scored_columns(df):
+    out = df.copy()
+
+    if "tipologia" not in out.columns:
+        fallback_col = next((c for c in ["tipo", "tipo_vivienda", "property_type"] if c in out.columns), None)
+        out["tipologia"] = out[fallback_col].astype(str) if fallback_col else "media"
+
+    defaults = {
+        "listing_id": "unknown",
+        "municipio": "desconocido",
+        "price": 0.0,
+        "m2": 0.0,
+        "buy_score_0_100": 0.0,
+        "recommendation": "NEUTRAL",
+        "decision_rationale": "Sin trazabilidad disponible.",
+    }
+    for col, value in defaults.items():
+        if col not in out.columns:
+            out[col] = value
+
+    return out
+
+
 def run_pipeline(cfg: dict) -> dict:
     output_dir = Path(cfg["paths"]["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -65,6 +90,7 @@ def run_pipeline(cfg: dict) -> dict:
 
     logger.info("run_id=%s | 5) Scoring", run_id)
     scored = compute_buy_score(train_df, cfg)
+    scored = _fill_missing_scored_columns(scored)
     scored = scored.sort_values("buy_score_0_100", ascending=False)
 
     forecast_df = build_forecast_frame(scored, horizon_months=cfg.get("forecast", {}).get("horizon_months", 6))
@@ -99,8 +125,9 @@ def run_pipeline(cfg: dict) -> dict:
         "recommendation",
         "decision_rationale",
     ]
-    available = [c for c in trace_cols if c in scored.columns]
-    scored[available].to_csv(trace_path, index=False)
+    scored.reindex(columns=trace_cols).to_csv(trace_path, index=False)
+
+    segment_models = getattr(model_result, "segment_models", {}) or {}
 
     segment_models = getattr(model_result, "segment_models", {}) or {}
 
@@ -112,8 +139,8 @@ def run_pipeline(cfg: dict) -> dict:
         "num_listings_scored": int(len(scored)),
         "avg_buy_score": float(scored["buy_score_0_100"].mean()),
         "segmented_models_trained": int(len(segment_models)),
-        "top_recommendations": top[
-            [
+        "top_recommendations": top.reindex(
+            columns=[
                 "listing_id",
                 "municipio",
                 "tipologia",
@@ -123,7 +150,7 @@ def run_pipeline(cfg: dict) -> dict:
                 "recommendation",
                 "decision_rationale",
             ]
-        ].to_dict(orient="records"),
+        ).to_dict(orient="records"),
         "macro": macro_df.iloc[0].to_dict(),
         "news": news_df.iloc[0].to_dict(),
         "historical_features": historical_features,
